@@ -1,0 +1,238 @@
+services:
+  Plex:
+    image: plexinc/pms-docker
+    container_name: Plex
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=America/Chicago
+      - PLEX_CLAIM=${PLEX_CLAIM}
+      - HOSTNAME=${PLEX_HOSTNAME}
+      - VERSION=docker
+#      - NVIDIA_VISIBLE_DEVICES=all
+#      - NVIDIA_DRIVER_CAPABILITIES=compute,video,utility
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - capabilities: [gpu]
+    network_mode: host
+    volumes:
+      - ${PLEX_DIR}/config:/config:rw
+      - ${PLEX_DIR}/transcodes:/transcode:rw
+#      - ${FILE_SHARE}/Media:/media
+#      - /dev/dri/card0:/dev/dri/card0
+#      - /dev/dri/card1:/dev/dri/card1
+#      - /dev/dri/card2:/dev/dri/card2
+#      - /dev/dri/renderD128:/dev/dri/renderD128
+#      - /dev/dri/renderD129:/dev/dri/renderD129
+    restart: always
+  Bazarr:
+    image: lscr.io/linuxserver/bazarr:latest
+    container_name: Bazarr
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=America/Chicago
+    volumes:
+      - ${BAZARR_DIR}/config:/config
+      - ${FILE_SHARE}/Media:/petri-media
+    network_mode: host
+#    ports:
+#      - 6767:6767
+    restart: unless-stopped
+    depends_on:
+      - Plex
+  Deluge:
+    image: lscr.io/linuxserver/deluge:latest
+    container_name: deluge
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=America/Chicago
+      - DELUGE_LOGLEVEL=error #optional
+    volumes:
+      - ${DELUGE_DIR}/config:/config
+      - ${FILE_SHARE}/Media:/media
+#      - /docker/NginxPM/self-ssl:/config/ssl
+    network_mode: host
+#    ports:
+#      - 8112:8112
+#      - 6881:6881
+#      - 6881:6881/udp
+    restart: always
+    depends_on:
+      - Plex
+  Lidarr:
+    image: lscr.io/linuxserver/lidarr:latest
+    container_name: Lidarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - ${LIDARR_DIR}/config:/config
+      - ${FILE_SHARE}/Media:/media
+    network_mode: host
+#    ports:
+#      - 8686:8686
+    restart: unless-stopped
+    depends_on:
+      - Plex
+  Overseerr:
+    image: sctx/overseerr:latest
+    container_name: Overseerr
+    environment:
+      - LOG_LEVEL=debug
+      - TZ=America/Chicago
+      - PORT=5055
+    volumes:
+      - ${OVERSEERR_DIR}/config:/app/config
+    network_mode: host
+#    ports:
+#      - 5055:5055
+    restart: always
+    depends_on:
+      - Plex
+  Prowlarr:
+    image: lscr.io/linuxserver/prowlarr:latest
+    container_name: Prowlarr
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=America/Chicago
+    volumes:
+      - ${PROWLARR_DIR}/config:/config
+    network_mode: host
+#    ports:
+#      - 9696:9696
+    restart: unless-stopped
+    depends_on:
+      - Plex
+  Radarr:
+    image: lscr.io/linuxserver/radarr:latest
+    container_name: Radarr
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=America/Chicago
+    volumes:
+      - ${RADARR_DIR}/config:/config
+      - ${FILE_SHARE}/Media:/media #optional
+    network_mode: host
+#    ports:
+#      - 7878:7878
+    restart: unless-stopped
+    depends_on:
+      - Plex
+  Requestrr:
+    image: thomst08/requestrr
+    container_name: Requestrr
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=America/Chicago
+    volumes:
+      - ${REQUESTRR_DIR}/config:/root/config
+    network_mode: host
+#    ports:
+#      - 4545:4545
+    restart: always
+    depends_on:
+      - Plex
+  Sonarr:
+    image: lscr.io/linuxserver/sonarr:latest
+    container_name: Sonarr
+    environment:
+      - PUID=0
+      - PGID=0
+      - TZ=America/Chicago
+    volumes:
+      - ${SONARR_DIR}/config:/config
+      - ${FILE_SHARE}/Media:/petri-media
+    network_mode: host
+#    ports:
+#      - 8989:8989
+    restart: always
+    depends_on:
+      - Plex
+  Tdarr:
+    container_name: Tdarr
+    image: ghcr.io/haveagitgat/tdarr:latest
+    restart: unless-stopped
+    network_mode: host # bridge
+#    ports:
+#      - 8265:8265 # webUI port
+#      - 8266:8266 # server port
+    environment:
+      - TZ=America/Chicago
+      - PUID=0
+      - PGID=0
+#      - UMASK_SET=002
+      - serverIP=0.0.0.0
+      - serverPort=8266
+      - webUIPort=8265
+      - internalNode=true
+      - inContainer=true
+      - ffmpegVersion=6
+      - nodeName=MyInternalNode
+#      - NVIDIA_DRIVER_CAPABILITIES=all
+#      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ${TDARR_DIR}/server:/app/server
+      - ${TDARR_DIR}/configs:/app/configs
+      - ${TDARR_DIR}/logs:/app/logs
+      - ${FILE_SHARE}/Media:/media
+      - ${TDARR_DIR}/transcode_cache:/temp
+#      - /dev/dri/card0:/dev/dri/card0
+#      - /dev/dri/card1:/dev/dri/card1
+#      - /dev/dri/card2:/dev/dri/card2
+#      - /dev/dri/renderD128:/dev/dri/renderD128
+#      - /dev/dri/renderD129:/dev/dri/renderD129
+#    devices:
+#      - /dev/nvidia0:/dev/nvidia0
+#    runtime: nvidia
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - capabilities: [gpu]
+# node example
+    depends_on:
+      - Plex
+  Tdarr-Node:
+    container_name: Tdarr-Node
+    image: ghcr.io/haveagitgat/tdarr_node:latest
+    restart: unless-stopped
+    network_mode: service:Tdarr
+    environment:
+      - TZ=America/Chicago
+      - PUID=0
+      - PGID=0
+#      - UMASK_SET=002
+      - nodeName=MyExternalNode
+      - serverIP=0.0.0.0
+      - serverPort=8266
+      - inContainer=true
+      - ffmpegVersion=6
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - NVIDIA_VISIBLE_DEVICES=all
+    volumes:
+      - ${TDARR_DIR}/configs:/app/configs
+      - ${TDARR_DIR}/logs:/app/logs
+      - ${FILE_SHARE}/Media:/media
+      - ${TDARR_DIR}/transcode_cache:/temp
+#      - /dev/dri/card0:/dev/dri/card0
+#      - /dev/dri/card1:/dev/dri/card1
+#      - /dev/dri/card2:/dev/dri/card2
+#      - /dev/dri/renderD128:/dev/dri/renderD128
+#      - /dev/dri/renderD129:/dev/dri/renderD129
+#   devices:
+#     - /dev/nvidia0:/dev/nvidia0
+#    deploy:
+#      resources:
+#        reservations:
+#          devices:
+#            - capabilities: [gpu]
+    depends_on:
+      - Tdarr
